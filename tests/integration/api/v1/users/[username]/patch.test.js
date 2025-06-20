@@ -1283,4 +1283,75 @@ describe('PATCH /api/v1/users/[username]', () => {
       expect(wrongPasswordMatch).toBe(false);
     });
   });
+
+  // Testes adicionados
+  describe('Default user > Patching itself (profile update edge cases)', () => {
+    test('Patching itself with a "description" containing exactly 5000 characters', async () => {
+      const defaultUser = await orchestrator.createUser();
+      await orchestrator.activateUser(defaultUser);
+      const defaultUserSession = await orchestrator.createSession(defaultUser);
+
+      const response = await fetch(`${orchestrator.webserverUrl}/api/v1/users/${defaultUser.username}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: `session_id=${defaultUserSession.token}`,
+        },
+        body: JSON.stringify({
+          description: 'a'.repeat(5000),
+        }),
+      });
+
+      const responseBody = await response.json();
+      expect.soft(response.status).toBe(200);
+      expect(responseBody.description).toBe('a'.repeat(5000));
+    });
+
+    test('Patching itself with only "notifications" field', async () => {
+      const defaultUser = await orchestrator.createUser({ notifications: true });
+      await orchestrator.activateUser(defaultUser);
+      const defaultUserSession = await orchestrator.createSession(defaultUser);
+
+      const response = await fetch(`${orchestrator.webserverUrl}/api/v1/users/${defaultUser.username}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: `session_id=${defaultUserSession.token}`,
+        },
+        body: JSON.stringify({
+          notifications: false,
+        }),
+      });
+
+      const responseBody = await response.json();
+      expect.soft(response.status).toBe(200);
+      expect(responseBody.notifications).toBe(false);
+
+      const userInDatabase = await user.findOneById(defaultUser.id);
+      expect(userInDatabase.notifications).toBe(false);
+      expect(userInDatabase.username).toBe(defaultUser.username);
+      expect(userInDatabase.email).toBe(defaultUser.email);
+    });
+
+    test('Patching itself with a "description" as an empty string', async () => {
+      const defaultUser = await orchestrator.createUser();
+      await orchestrator.activateUser(defaultUser);
+      const defaultUserSession = await orchestrator.createSession(defaultUser);
+
+      const response = await fetch(`${orchestrator.webserverUrl}/api/v1/users/${defaultUser.username}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          cookie: `session_id=${defaultUserSession.token}`,
+        },
+        body: JSON.stringify({
+          description: '',
+        }),
+      });
+
+      const responseBody = await response.json();
+      expect.soft(response.status).toBe(200);
+      expect(responseBody.description).toBe('');
+    });
+  });
 });
