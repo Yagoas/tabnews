@@ -21,6 +21,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
+          environment: 'jsdom',
           exclude: ['**/integration/**', '**/interface/**', ...defaultExclude],
         },
       },
